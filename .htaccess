@@ -1,0 +1,4 @@
+# Prevent public access to all hidden files, including .env, .git, and .htaccess itself
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

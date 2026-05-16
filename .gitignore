@@ -1,0 +1,5 @@
+# Ignore environment variables
+.env
+
+# Ignore cache directory and all its contents
+cache/
