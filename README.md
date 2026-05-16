@@ -1,59 +1,39 @@
-# Universal Web Reader
+# Minimalist Web Reader
 
-A minimalist, universally accessible web reader application focused entirely on a clean reading experience.
+A highly secure, zero-JS, distraction-free web proxy and reading environment heavily optimized for E-ink devices like the Amazon Kindle. It completely bypasses aggressive browser caching and features a robust server-side authentication gateway.
 
-## Features
+## Key Features
 
-- **Distraction-Free Reading**: Clean typography, optimal line-spacing, and centered column for long-form reading.
-- **Search Integration**: Uses Jina's search API to find articles across the web.
-- **Smart Routing**: Paste a URL to read it instantly, or type a query to search.
-- **Dark Mode**: Toggleable dark/light themes for comfortable reading in any environment.
-- **Lightweight Architecture**: No complex frontend frameworks. Runs on simple PHP and minimal vanilla JavaScript (using CDN libraries for Markdown parsing).
-- **Fast & Efficient**: Built-in filesystem caching for instant load times on repeated reads.
+* **Two Modes of Operation**:
+    * **Reader Mode**: Extracts only the pure article text/content for a distraction-free experience. Uses a fast native DOM extractor (Tier 1) and falls back to Jina Reader API (Tier 2) for JS-heavy sites.
+    * **Web Mode**: Acts as a lightweight proxy, preserving all site navigation, menus, pagination, and links while stripping away heavy CSS, videos, and dangerous scripts.
+* **Aggressive Anti-Caching Security**: Enforces strict server-side PIN authentication. Session rotation and token invalidation prevent older Kindle browsers from replaying back-button cache. 
+* **Two-Phase Loading Architecture**: Instantly serves a lightweight loading shell for cache-misses while fetching content in the background. Prevents Kindle browser timeouts.
+* **Zero Client-Side JS**: Entirely rendered server-side. Perfect for low-power, low-memory E-ink browsers.
+* **URL Obfuscation**: Internal URLs are converted into short hashes, hiding your browsing targets from network observers and history states.
 
-## File Structure
+## Installation
 
-```text
-web_reader/
-├── index.php      # Main search/URL input interface
-├── search.php     # Handles web search and displays results
-├── read.php       # Fetches and renders articles in reader mode
-├── functions.php  # Shared utilities (cURL fetching, caching, config)
-└── cache/         # Writable directory for cached API responses
+1. Clone or upload this repository to your PHP server (e.g., XAMPP, Apache).
+2. Ensure the `cache/` directory has write permissions (it will be created automatically if not present).
+3. Create a `.env` file in the root directory:
+
+```env
+JINA_API_KEY=your_jina_api_key_here
+READER_PIN=your_secret_pin
 ```
 
-## Deployment Instructions
+4. You can get a free Jina API key at [jina.ai](https://jina.ai/) if you don't have one.
 
-This application is designed to be as simple to deploy as possible. It runs on almost any modern PHP hosting environment (Shared Hosting, VPS, Docker, etc.).
+## Security Overview
 
-### Prerequisites
-- PHP 7.4 or higher
-- PHP cURL extension enabled
+- **.env Protection**: A pre-configured `.htaccess` file prevents any web access to your `.env` and configuration files.
+- **Single Active Session**: Logging into the reader immediately rotates the server token, instantly kicking out any other active sessions on other devices.
+- **Cloudflare Compatible**: Built-in HTTP headers aggressively enforce `no-store` and `no-cache`, effectively forcing Cloudflare edge nodes and the Kindle's BFCache to re-validate authentication on every page visit.
 
-### Setup Steps
+## Usage
 
-1. **Upload Files**
-   Upload all files (`index.php`, `search.php`, `read.php`, `functions.php`) to your web server's document root or a subdirectory (e.g., `/public_html/reader/`).
-
-2. **Configure Permissions**
-   The application uses a filesystem cache to store fetched articles and search results. The `cache/` folder is automatically created, but you must ensure your web server has permissions to write to it.
-   ```bash
-   chmod -R 755 cache/
-   # OR if necessary:
-   chmod -R 777 cache/
-   ```
-
-3. **Configure API Key (Optional but recommended)**
-   The Jina Search API (`s.jina.ai`) often requires an API key for access. You can get one from the [Jina AI Platform](https://jina.ai/).
-   - Open `functions.php`.
-   - Locate the line `define('JINA_API_KEY', '');`
-   - Paste your API key inside the quotes.
-
-4. **Access the Application**
-   Visit the URL where you deployed the files (e.g., `http://yourdomain.com/reader/`) and start reading!
-
-## Technical Stack
-- **Backend**: Vanilla PHP with cURL.
-- **Styling**: Tailwind CSS (via CDN).
-- **Markdown Rendering**: marked.js (via CDN).
-- **Sanitization**: DOMPurify (via CDN).
+1. Navigate to the reader's URL in your device's browser.
+2. Enter your PIN.
+3. Use the search bar (powered anonymously by DuckDuckGo HTML) to find topics or paste direct URLs.
+4. Toggle between `[ Reader ]` and `[ Web ]` in the top navigation bar while reading any article.
