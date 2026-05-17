@@ -91,6 +91,7 @@ if (isset($_POST['q'])) {
 </head>
 <body>
     <div style="text-align: right; padding: 10px;">
+        <a href="admin.php" style="color: #666; text-decoration: none; margin-right: 15px;">[ Admin ]</a>
         <a href="?logout=1" style="color: #666; text-decoration: none;">[ Lock ]</a>
     </div>
     <h1>Reader</h1>

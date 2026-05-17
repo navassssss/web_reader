@@ -19,9 +19,11 @@ define('JINA_API_KEY', $_ENV['JINA_API_KEY'] ?? '');
 
 // Security Configuration
 define('READER_PIN', $_ENV['READER_PIN'] ?? '0000'); // Default PIN if missing
+define('BLACKLIST_KEY', $_ENV['BLACKLIST_KEY'] ?? 'default_key');
 define('SESSION_TIMEOUT', 1800); // 30 minutes
 define('LINKS_DIR', CACHE_DIR . 'links/');
 define('AUTH_TOKEN_FILE', CACHE_DIR . 'auth_token.txt');
+define('BLACKLIST_FILE', CACHE_DIR . 'blacklist.enc');
 
 // Ensure directories exist
 if (!is_dir(CACHE_DIR)) mkdir(CACHE_DIR, 0755, true);
@@ -163,6 +165,73 @@ function get_url_from_shortcode($code) {
         return file_get_contents($file);
     }
     return null;
+}
+
+// --- Blacklist Functions ---
+function encrypt_blacklist($array) {
+    $json = json_encode(array_values(array_unique(array_filter($array))));
+    $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+    // Hash key to exactly 32 bytes (256 bits) required for AES-256
+    $key = hash('sha256', BLACKLIST_KEY, true);
+    $encrypted = openssl_encrypt($json, 'aes-256-cbc', $key, 0, $iv);
+    return base64_encode($encrypted . '::' . base64_encode($iv));
+}
+
+function decrypt_blacklist() {
+    if (!file_exists(BLACKLIST_FILE)) return [];
+    $data = base64_decode(file_get_contents(BLACKLIST_FILE));
+    if (strpos($data, '::') === false) return [];
+    list($encrypted_data, $iv_b64) = explode('::', $data, 2);
+    $iv = base64_decode($iv_b64);
+    $key = hash('sha256', BLACKLIST_KEY, true);
+    $decrypted = openssl_decrypt($encrypted_data, 'aes-256-cbc', $key, 0, $iv);
+    return $decrypted ? json_decode($decrypted, true) : [];
+}
+
+function filter_blocked_words($html) {
+    if (empty($html)) return $html;
+    $words = decrypt_blacklist();
+
+    $dom = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="utf-8"?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    libxml_clear_errors();
+
+    // 1. Always remove images and image wrappers
+    $remove_tags = ['img', 'picture', 'figure'];
+    foreach ($remove_tags as $tag) {
+        $nodes = $dom->getElementsByTagName($tag);
+        $to_remove = [];
+        foreach ($nodes as $n) $to_remove[] = $n;
+        foreach ($to_remove as $n) {
+            if ($n->parentNode) $n->parentNode->removeChild($n);
+        }
+    }
+
+    // 2. Filter blocked words from text nodes (if any words exist)
+    if (!empty($words)) {
+        $xpath = new DOMXPath($dom);
+        $textNodes = $xpath->query('//text()');
+
+        foreach ($textNodes as $node) {
+            $text = $node->nodeValue;
+            if (trim($text) === '') continue;
+            
+            $replaced = false;
+            foreach ($words as $word) {
+                if (stripos($text, $word) !== false) {
+                    $text = str_ireplace($word, '', $text);
+                    $replaced = true;
+                }
+            }
+            if ($replaced) {
+                $node->nodeValue = $text;
+            }
+        }
+    }
+
+    $filtered = $dom->saveHTML();
+    return str_replace('<?xml encoding="utf-8"?>', '', $filtered);
 }
 
 /**
@@ -371,6 +440,8 @@ function fetch_article_html($url) {
         $html = $parsedown->text($markdown);
     }
 
+    $html = filter_blocked_words($html);
+
     // Prepend tier marker so the caller can show which method was used
     $output = "<!--tier:$tier-->" . $html;
 
@@ -409,6 +480,8 @@ function simplify_webpage($url) {
     $parsedown = new Parsedown();
     $parsedown->setSafeMode(true);
     $html = $parsedown->text($markdown);
+
+    $html = filter_blocked_words($html);
 
     if ($html) file_put_contents($cache_file, $html);
 

@@ -266,6 +266,7 @@ if (!$url) {
         <?php endif; ?>
         <?php endif; ?>
         <a href="?logout=1" style="float: right;">[ Lock ]</a>
+        <a href="admin.php" style="float: right; margin-right: 15px;">[ Admin ]</a>
     </div>
 
     <main>
