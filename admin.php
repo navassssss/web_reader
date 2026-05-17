@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_index']) && is
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Minimalist Web Reader</title>
+    <title>Admin</title>
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #fff; color: #111; }
         @media (prefers-color-scheme: dark) { body { background: #121212; color: #eee; } }
